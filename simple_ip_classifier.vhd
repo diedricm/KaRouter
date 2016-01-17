@@ -28,7 +28,7 @@ entity simple_ip_classifier is
 		addr_in	: in  std_logic_vector(GENS.ADDRWIDTH-1 downto 0);
 		data_in	: in  std_logic_vector(GENS.DATAWIDTH-1 downto 0);
 		req_in	: in  std_logic_vector(GENS.REQWIDTH-1 downto 0);
-		vec_result: out std_logic_vector(GENS.RULEIDWIDTH-1 downto 0)
+		vec_result: out std_logic_vector(GENS.VECWIDTH-1 downto 0)
 	);
 end simple_ip_classifier;
 
@@ -39,7 +39,6 @@ begin
 		DIMCNT		=> GENS.DIMCNT,
 		VECWIDTH		=> GENS.VECWIDTH,
 		ADDRWIDTH	=> GENS.ADDRWIDTH,
-		RULEIDWIDTH	=> GENS.RULEIDWIDTH,
 		REQWIDTH		=> GENS.REQWIDTH,
 		DATAWIDTH	=> GENS.DATAWIDTH,
 		TRNCAMGENS	=> GENS.TRNCAMGENS

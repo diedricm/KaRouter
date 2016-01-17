@@ -57,7 +57,7 @@ begin
         end loop;
     end process;
 
-    change_conf: process (clk)
+    change_conf: process (ALL)
         variable addr : integer;
     begin
         if rising_edge(clk) then

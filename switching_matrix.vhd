@@ -17,7 +17,7 @@ end switching_matrix;
 
 architecture Behavioral of switching_matrix is
 begin
-    setup_switch_matrix: process (input)
+    setup_switch_matrix: process (ALL)
     begin
         for i in PORTCNT-1 downto 0 loop
             for j in PORTCNT-1 downto 0 loop

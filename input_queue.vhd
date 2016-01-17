@@ -53,20 +53,26 @@ architecture Behavioral of input_queue is
 begin
 
     output_dest_data <= shiftreg;
+    output_data <= shiftreg(BLOCKWIDTH-1 downto 0);
 
-    manage_state: process (clk)
+    manage_state: process (ALL)
         variable v_reset : boolean;
         variable v_push : boolean;
         variable v_pull : boolean;
+	variable v_blocks_read_cnt_front   : unsigned(BLOCKWIDTH-1 downto 0);
+	variable v_blocks_read_cnt_back   : unsigned(BLOCKWIDTH-1 downto 0);
     begin
         v_reset := reset = '1';
         v_push := push;
         v_pull := pull;
+	v_blocks_read_cnt_front := blocks_read_cnt_front;
+	v_blocks_read_cnt_back := blocks_read_cnt_back;
             
-        if rising_edge(clk) then        
+        if rising_edge(clk) then
             --If a last block left the queue
             if blocks_read_cnt_back = packet_size_back then
                 self_request_vec <= (others => false);
+		new_packet_coming <= true;
                 v_push := false;
             end if;
             
@@ -77,44 +83,33 @@ begin
             
             --If the queue contains the full header
             if blocks_read_cnt_front = QUEUE_DEPTH then
-                packet_size_back <= packet_size_front;
-                blocks_read_cnt_back <= to_unsigned(1, BLOCKWIDTH);
                 self_request_vec <= outport_mask;
+                packet_size_back <= packet_size_front;
+                v_blocks_read_cnt_back := to_unsigned(0, BLOCKWIDTH);
                 v_reset := v_reset or drop_event;
                 v_push := true;
             end if;
             
             --If a new packets first block arrived at the queue
             if new_packet_coming and prev_valid then
+		new_packet_coming <= false;
                 packet_size_front <= unsigned(input_data);
-                blocks_read_cnt_front <= to_unsigned(1, BLOCKWIDTH);
+                v_blocks_read_cnt_front := to_unsigned(0, BLOCKWIDTH);
                 v_pull := true;
             end if;
-            
-            if v_reset then
-                v_push := false;
-                v_pull := false;
-                new_packet_coming <= true;
-                output_drop_event <= true;
-                blocks_read_cnt_front <= (others => '0');
-                blocks_read_cnt_back <= (others => '0');
-                packet_size_front <= (others => '1');
-                packet_size_back <= (others => '1');
-            end if;
-            
+
             --Push all blocks backwards in the lsr
-            if (not pull or prev_valid) and (not push or next_valid) and (push or pull) then
+            if (not v_pull or prev_valid) and (not v_push or next_valid) and (v_push or v_pull) then
                 for i in QUEUE_DEPTH-1 downto 1 loop
                     for j in BLOCKWIDTH-1 downto 0 loop
                         shiftreg((i-1)*BLOCKWIDTH+j) <= shiftreg(i*BLOCKWIDTH+j);
                     end loop;
                 end loop;
                 
-                blocks_read_cnt_front <= blocks_read_cnt_front + 1; 
-                blocks_read_cnt_back <= blocks_read_cnt_back + 1;
+                v_blocks_read_cnt_front := v_blocks_read_cnt_front + 1; 
+                v_blocks_read_cnt_back := v_blocks_read_cnt_back + 1;
                 
                 shiftreg(QUEUESIZE-1 downto QUEUESIZE-BLOCKWIDTH) <= input_data;
-                output_data <= shiftreg(BLOCKWIDTH-1 downto 0);
                 
                 output_to_prev_valid <= true;
                 output_to_next_valid <= true;
@@ -122,10 +117,22 @@ begin
                 output_to_prev_valid <= false;
                 output_to_next_valid <= false;
             end if;
+
+            if v_reset then
+                v_push := false;
+                v_pull := false;
+                new_packet_coming <= true;
+                output_drop_event <= true;
+                v_blocks_read_cnt_front := (others => '0');
+                v_blocks_read_cnt_back := (others => '0');
+                packet_size_front <= (others => '1');
+                packet_size_back <= (others => '1');
+            end if;
+
+	    push <= v_push;
+	    pull <= v_pull;
+	    blocks_read_cnt_front <= v_blocks_read_cnt_front;
+	    blocks_read_cnt_back <= v_blocks_read_cnt_back;
         end if;
-        
-        push <= v_push;
-        pull <= v_pull;
     end process;
 end Behavioral;
-
